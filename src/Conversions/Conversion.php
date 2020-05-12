@@ -23,6 +23,9 @@ class Conversion
 
     public static function getInstance(): Conversion
     {
+        if( empty(self::$instances) )
+            self::$instances = new static;
+        
         return self::$instances;
     }
 
