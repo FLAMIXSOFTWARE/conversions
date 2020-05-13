@@ -88,6 +88,10 @@ class Conversion
         curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
 
         $response = curl_exec($ch);
+        $arResponse = json_decode($response, true);
+        
+        if(is_array($arResponse) && $arResponse['status'] == 'error')
+            throw new \Exception($arResponse['msg']);
 
         curl_close($ch);
     }
