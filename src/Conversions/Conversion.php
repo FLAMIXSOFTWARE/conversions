@@ -80,10 +80,11 @@ class Conversion
             $post['currency'] = $currency;
         }
 
-
-
         $ch = curl_init(self::$url . '/api/conversion/add/' . self::$code . '/' );
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+        curl_setopt($ch, CURLOPT_POSTREDIR, 3);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
 
         $response = curl_exec($ch);
