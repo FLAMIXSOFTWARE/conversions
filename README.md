@@ -2,6 +2,12 @@
 
 Site - https://flamix.solutions/bitrix24/conversion.php
 
+## Install
+
+```php
+composer require flamix/conversions
+```
+
 ## Usage
 
 ```php
