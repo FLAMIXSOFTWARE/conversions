@@ -105,7 +105,7 @@ class Conversion
      * @return array|bool
      * @throws \Exception
      */
-    public static function addFromCookie($price = 0, $currency = '' )
+    public static function addFromCookie( $price = 0, $currency = '' )
     {
         $metrics = self::getFromCookie();
         if(!$metrics)
@@ -142,19 +142,32 @@ class Conversion
     }
 
     /**
-     * Create input to use on site
+     * Prepared UID form COOKIE in standard format
      *
-     * @param string $name
      * @return bool|string
      */
-    public static function getInput(string $name = 'UF_CRM_FX_CONVERSION' )
+    public static function getPreparedUID()
     {
         $metrics = self::getFromCookie();
 
         if(empty($metrics))
             return false;
 
-        $metrics = implode(';', $metrics);
+        return implode(';', $metrics);
+    }
+
+    /**
+     * Create input to use on site
+     *
+     * @param string $name
+     * @return bool|string
+     */
+    public static function getInput( string $name = 'UF_CRM_FX_CONVERSION' )
+    {
+        $metrics = self::getPreparedUID();
+
+        if(!$metrics || empty($metrics))
+            return false;
 
         return "<input type='hidden' name='{$name}' value='$metrics' />";
     }
