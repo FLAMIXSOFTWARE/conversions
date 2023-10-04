@@ -2,85 +2,83 @@
 
 namespace Flamix\Conversions;
 
-/**
-* Conversion
-*/
+use Exception;
+
 class Conversion
 {
-    private static $instances;
-    private static $url = 'https://conversion.app.flamix.solutions';
-    private static $code;
-    private static $domain;
+    private static self $instances;
+    private static string $url = 'https://conversion.app.flamix.solutions';
+    private static string $code;
+    private static string $domain;
 
-
-    protected function __construct() {}
-    protected function __clone() {}
+    protected function __construct(){}
+    protected function __clone(){}
     public function __wakeup()
     {
-        throw new \Exception("Cannot unserialize a singleton.");
+        throw new Exception("Can't serialize a singleton!");
     }
 
-
-    public static function getInstance(): Conversion
+    public static function getInstance(): self
     {
-        if( empty(self::$instances) )
+        if (empty(self::$instances)) {
             self::$instances = new static;
-        
+        }
+
         return self::$instances;
     }
 
     /**
-     * Set your API code
+     * Set your API code.
      *
      * @param string $code
-     * @return mixed
+     * @return self
      */
-    public static function setCode( string $code )
+    public static function setCode(string $code): self
     {
         self::$code = $code;
         return self::$instances;
     }
 
     /**
-     * Set your DOMAIN (for auth)
+     * Set your DOMAIN (for auth).
      *
      * @param string $domain
-     * @return mixed
+     * @return self
      */
-    public static function setDomain( string $domain )
+    public static function setDomain(string $domain): self
     {
         self::$domain = $domain;
         return self::$instances;
     }
 
     /**
-     * Send data to App
+     * Send data to App.
      *
-     * @param $uid User Id
-     * @param int $price
+     * @param string $uid User Id
+     * @param float $price
      * @param string $currency
      * @throws \Exception
      */
-    public static function add( $uid, $price = 0, $currency = '' )
+    public static function add(string $uid, float $price = 0, string $currency = '')
     {
-        if(!isset($uid))
-            throw new \Exception();
-        else
-            $post = array( 'uid' => $uid );
+        $post = ['uid' => $uid];
 
-        if(empty(self::$code))
-            throw new \Exception('Set your API code whith setCode(\'YOUR_CODE\')');
+        if (empty(self::$code)) {
+            throw new Exception("Set your API code with setCode('YOUR_CODE')");
+        }
 
-        if(empty(self::$domain))
-            throw new \Exception('Set your DOMAIN^ which you use in APP whith setDomain(\'YOUR_DOMAIN\')');
+        if (empty(self::$domain)) {
+            throw new Exception("Set your DOMAIN which you use in APP with setDomain('YOUR_DOMAIN')");
+        }
+
         $post['DOMAIN'] = self::$domain;
 
-        if($price > 0 && !empty($currency)) {
+        if ($price > 0 && !empty($currency)) {
             $post['price'] = $price;
             $post['currency'] = $currency;
         }
 
-        $ch = curl_init(self::$url . '/api/conversion/add/' . self::$code . '/' );
+        $ch = curl_init(self::$url . '/api/conversion/add/' . self::$code . '/');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
@@ -89,30 +87,33 @@ class Conversion
 
         $response = curl_exec($ch);
         $arResponse = json_decode($response, true);
-        
-        if(is_array($arResponse) && $arResponse['status'] == 'error')
-            throw new \Exception($arResponse['msg']);
+
+        if (is_array($arResponse) && $arResponse['status'] == 'error') {
+            throw new Exception($arResponse['msg']);
+        }
 
         curl_close($ch);
     }
 
 
     /**
-     * Check COOKIE and if its isset - send to service
+     * Check COOKIE and if its isset - send to service.
      *
-     * @param int $price
+     * @param float $price
      * @param string $currency
      * @return array|bool
      * @throws \Exception
      */
-    public static function addFromCookie( $price = 0, $currency = '' )
+    public static function addFromCookie(float $price = 0, string $currency = '')
     {
         $metrics = self::getFromCookie();
-        if(!$metrics)
+        if (!$metrics) {
             return false;
+        }
 
-        foreach ($metrics as $metric)
+        foreach ($metrics as $metric) {
             self::add($metric, $price, $currency);
+        }
 
         return $metrics;
     }
@@ -120,55 +121,55 @@ class Conversion
     /**
      * Return USER_ID as array
      *
-     * @return array|bool
+     * @return array
      */
-    public static function getFromCookie()
+    public static function getFromCookie(): array
     {
-        $return = array();
-
-        if(isset($_COOKIE['_ym_uid']) && !empty($_COOKIE['_ym_uid']))
+        if (!empty($_COOKIE['_ym_uid'] ?? null)) {
             $return['_ym_uid'] = $_COOKIE['_ym_uid'];
+        }
 
-        if(isset($_COOKIE['_ga']) && !empty($_COOKIE['_ga']))
+        if (!empty($_COOKIE['_ga'] ?? null)) {
             $return['_ga'] = $_COOKIE['_ga'];
 
-        if(isset($_COOKIE['_fbp']) && !empty($_COOKIE['_fbp']))
+            // Add GCLID if exist.
+            if (!empty($_COOKIE['gclid'] ?? null)) {
+                $return['_ga'] .= '|GCLID.' . $_COOKIE['gclid'];
+            } else if (!empty($_COOKIE['_gcl_aw'] ?? null)) {
+                preg_match('/GCL\.\d+\.(\w+)/', $_COOKIE['_gcl_aw'], $matches);
+                if (!empty($matches[1] ?? null)) {
+                    $return['_ga'] .= '|GCLID.' . $matches[1];
+                }
+            }
+        }
+
+        if (!empty($_COOKIE['_fbp'] ?? null)) {
             $return['_fbp'] = $_COOKIE['_fbp'];
+        }
 
-        if(empty($return))
-            return false;
-
-        return $return;
+        return $return ?? [];
     }
 
     /**
-     * Prepared UID form COOKIE in standard format
+     * Prepared UID form COOKIE in standard format.
      *
      * @return bool|string
      */
     public static function getPreparedUID()
     {
         $metrics = self::getFromCookie();
-
-        if(empty($metrics))
-            return false;
-
-        return implode(';', $metrics);
+        return empty($metrics) ? false : implode(';', $metrics);
     }
 
     /**
-     * Create input to use on site
+     * Create input to use on site.
      *
      * @param string $name
      * @return bool|string
      */
-    public static function getInput( string $name = 'UF_CRM_FX_CONVERSION' )
+    public static function getInput(string $name = 'UF_CRM_FX_CONVERSION')
     {
         $metrics = self::getPreparedUID();
-
-        if(!$metrics || empty($metrics))
-            return false;
-
-        return "<input type='hidden' name='{$name}' value='$metrics' />";
+        return empty($metrics) ? false : "<input type='hidden' name='{$name}' value='$metrics' />";
     }
 }
