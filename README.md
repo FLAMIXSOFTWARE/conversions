@@ -1,6 +1,6 @@
 ![Screenshot](img/header.jpg)
 
-Site - https://flamix.solutions/bitrix24/conversion.php
+Site - https://flamix.solutions/bitrix24/marketing/conversion.php
 
 ## Install
 
