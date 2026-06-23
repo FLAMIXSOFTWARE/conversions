@@ -247,6 +247,15 @@ class Conversion
             $return['_fbp'] = $_COOKIE['_fbp'];
         }
 
+        if (! empty($_COOKIE['_ttp'] ?? null)) {
+            $return['_ttp'] = $_COOKIE['_ttp'];
+
+            // Append the TTCLID (TikTok click id) when it is available.
+            if (! empty($_COOKIE['ttclid'] ?? null)) {
+                $return['_ttp'] .= '|TTCLID.' . $_COOKIE['ttclid'];
+            }
+        }
+
         return $return ?? [];
     }
 
