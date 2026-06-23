@@ -21,6 +21,20 @@ try {
 }
 ```
 
+## Collected identifiers
+
+The UID is built from the visitor's analytics cookies:
+
+| Source | Cookie | Notes |
+| --- | --- | --- |
+| Yandex Metrika | `_ym_uid` | |
+| Google Analytics | `_ga` | `gclid` (or `_gcl_aw`) is appended as `\|GCLID.xxx` |
+| Facebook Pixel | `_fbp` | |
+| TikTok Pixel | `_ttp` | `ttclid` is appended as `\|TTCLID.xxx` |
+
+`ttclid` / `gclid` are click ids that arrive as URL parameters — store them in a
+cookie first (e.g. via `\Flamix\Bitrix24\Trace::init()` from `flamix/b24-lead`).
+
 ## Add input with UID
 
 ```php
