@@ -4,90 +4,33 @@ namespace Flamix\Conversions;
 
 use Exception;
 
-/**
- * Conversion client for the Flamix Conversion APP.
- *
- * Collects analytics identifiers from the visitor's cookies (Google Analytics,
- * Yandex Metrika, Facebook Pixel, Google Ads click id) and sends them to the
- * Flamix Conversion service so a lead can be matched back to its ad source.
- *
- * @see https://conversion.app.flamix.solutions
- */
+/** Reads the visitor's analytics cookies into a UID and sends conversions to the Flamix Conversion APP. */
 class Conversion
 {
-    /**
-     * The shared singleton instance.
-     *
-     * @var self
-     */
     private static self $instances;
 
-    /**
-     * The base URL of the Conversion service.
-     *
-     * @var string
-     */
     private static string $url = 'https://conversion.app.flamix.solutions';
 
-    /**
-     * The API code used to authenticate requests.
-     *
-     * @var string
-     */
     private static string $code;
 
-    /**
-     * The domain registered in the APP (used for auth).
-     *
-     * @var string
-     */
     private static string $domain;
 
-    /**
-     * Number of seconds to wait while trying to connect.
-     *
-     * @var int
-     */
     private static int $connectTimeout = 5;
 
-    /**
-     * Maximum number of seconds to allow the whole request to run.
-     *
-     * @var int
-     */
     private static int $timeout = 10;
 
-    /**
-     * Prevent direct construction — use getInstance() instead.
-     *
-     * @return void
-     */
+    /** Singleton: use getInstance(). */
     protected function __construct() {}
 
-    /**
-     * Prevent cloning of the singleton.
-     *
-     * @return void
-     */
+    /** Singleton: cloning is not allowed. */
     protected function __clone() {}
 
-    /**
-     * Prevent unserialization of the singleton.
-     *
-     * @return void
-     *
-     * @throws \Exception
-     */
+    /** @throws \Exception always: the singleton cannot be unserialized. */
     public function __wakeup()
     {
-        throw new Exception("Can't serialize a singleton!");
+        throw new Exception("Can't unserialize a singleton!");
     }
 
-    /**
-     * Get the shared singleton instance.
-     *
-     * @return self
-     */
     public static function getInstance(): self
     {
         if (empty(self::$instances)) {
@@ -97,12 +40,6 @@ class Conversion
         return self::$instances;
     }
 
-    /**
-     * Set your API code.
-     *
-     * @param  string  $code
-     * @return self
-     */
     public static function setCode(string $code): self
     {
         self::$code = $code;
@@ -110,12 +47,6 @@ class Conversion
         return self::getInstance();
     }
 
-    /**
-     * Set your DOMAIN (for auth).
-     *
-     * @param  string  $domain
-     * @return self
-     */
     public static function setDomain(string $domain): self
     {
         self::$domain = $domain;
@@ -124,12 +55,7 @@ class Conversion
     }
 
     /**
-     * Send a single conversion to the APP.
-     *
-     * @param  string  $uid  User Id
-     * @param  float  $price
-     * @param  string  $currency
-     * @return void
+     * Send one conversion; price is sent only together with a currency.
      *
      * @throws \Exception
      */
@@ -163,7 +89,6 @@ class Conversion
 
         $response = curl_exec($ch);
 
-        // Bail out on a transport-level failure (timeout, DNS, refused connection, ...).
         if ($response === false) {
             $error = curl_error($ch);
             curl_close($ch);
@@ -181,14 +106,9 @@ class Conversion
     }
 
     /**
-     * Check the COOKIE and, if present, send every metric to the service.
+     * Send every cookie identifier as its own conversion; errors are thrown together after all are tried.
      *
-     * Every metric is attempted even if one of them fails; any errors are
-     * collected and thrown together once all of them have been processed.
-     *
-     * @param  float  $price
-     * @param  string  $currency
-     * @return array|bool
+     * @return array<string, string>|false
      *
      * @throws \Exception
      */
@@ -218,40 +138,39 @@ class Conversion
     }
 
     /**
-     * Return the collected USER_ID metrics as an array.
+     * The visitor's identifiers keyed by cookie name.
      *
-     * @return array
+     * @return array<string, string>
      */
     public static function getFromCookie(): array
     {
-        if (! empty($_COOKIE['_ym_uid'] ?? null)) {
+        if (! empty($_COOKIE['_ym_uid'])) {
             $return['_ym_uid'] = $_COOKIE['_ym_uid'];
         }
 
-        if (! empty($_COOKIE['_ga'] ?? null)) {
+        if (! empty($_COOKIE['_ga'])) {
             $return['_ga'] = $_COOKIE['_ga'];
 
-            // Append the GCLID (Google Ads click id) when it is available.
-            if (! empty($_COOKIE['gclid'] ?? null)) {
+            if (! empty($_COOKIE['gclid'])) {
                 $return['_ga'] .= '|GCLID.' . $_COOKIE['gclid'];
-            } elseif (! empty($_COOKIE['_gcl_aw'] ?? null)) {
-                preg_match('/GCL\.\d+\.(\w+)/', $_COOKIE['_gcl_aw'], $matches);
+            } elseif (! empty($_COOKIE['_gcl_aw'])) {
+                // [\w-]: gclids contain '-', and \w alone cuts them there.
+                preg_match('/GCL\.\d+\.([\w-]+)/', $_COOKIE['_gcl_aw'], $matches);
 
-                if (! empty($matches[1] ?? null)) {
+                if (! empty($matches[1])) {
                     $return['_ga'] .= '|GCLID.' . $matches[1];
                 }
             }
         }
 
-        if (! empty($_COOKIE['_fbp'] ?? null)) {
+        if (! empty($_COOKIE['_fbp'])) {
             $return['_fbp'] = $_COOKIE['_fbp'];
         }
 
-        if (! empty($_COOKIE['_ttp'] ?? null)) {
+        if (! empty($_COOKIE['_ttp'])) {
             $return['_ttp'] = $_COOKIE['_ttp'];
 
-            // Append the TTCLID (TikTok click id) when it is available.
-            if (! empty($_COOKIE['ttclid'] ?? null)) {
+            if (! empty($_COOKIE['ttclid'])) {
                 $return['_ttp'] .= '|TTCLID.' . $_COOKIE['ttclid'];
             }
         }
@@ -260,9 +179,9 @@ class Conversion
     }
 
     /**
-     * Return the prepared UID in the standard format.
+     * The identifiers joined with ';', or false without any.
      *
-     * @return bool|string
+     * @return string|false
      */
     public static function getPreparedUID()
     {
@@ -272,10 +191,9 @@ class Conversion
     }
 
     /**
-     * Create a hidden input with the UID to use on the site.
+     * A hidden input holding getPreparedUID(), or false without any identifier.
      *
-     * @param  string  $name
-     * @return bool|string
+     * @return string|false
      */
     public static function getInput(string $name = 'UF_CRM_FX_CONVERSION')
     {
