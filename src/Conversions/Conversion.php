@@ -96,12 +96,17 @@ class Conversion
             throw new Exception("Conversion request failed: {$error}");
         }
 
+        $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
         curl_close($ch);
 
         $arResponse = json_decode($response, true);
 
         if (is_array($arResponse) && ($arResponse['status'] ?? '') === 'error') {
             throw new Exception($arResponse['msg'] ?? 'Unknown error from the conversion service.');
+        }
+
+        if ($status >= 400) {
+            throw new Exception("Conversion request failed: HTTP {$status}");
         }
     }
 
@@ -144,18 +149,23 @@ class Conversion
      */
     public static function getFromCookie(): array
     {
-        if (! empty($_COOKIE['_ym_uid'])) {
-            $return['_ym_uid'] = $_COOKIE['_ym_uid'];
+        $cookie = static function (string $name): string {
+            // name[]=... arrives as an array, and every caller below expects a string.
+            return is_string($_COOKIE[$name] ?? null) ? $_COOKIE[$name] : '';
+        };
+
+        if (! empty($cookie('_ym_uid'))) {
+            $return['_ym_uid'] = $cookie('_ym_uid');
         }
 
-        if (! empty($_COOKIE['_ga'])) {
-            $return['_ga'] = $_COOKIE['_ga'];
+        if (! empty($cookie('_ga'))) {
+            $return['_ga'] = $cookie('_ga');
 
-            if (! empty($_COOKIE['gclid'])) {
-                $return['_ga'] .= '|GCLID.' . $_COOKIE['gclid'];
-            } elseif (! empty($_COOKIE['_gcl_aw'])) {
+            if (! empty($cookie('gclid'))) {
+                $return['_ga'] .= '|GCLID.' . $cookie('gclid');
+            } elseif (! empty($cookie('_gcl_aw'))) {
                 // [\w-]: gclids contain '-', and \w alone cuts them there.
-                preg_match('/GCL\.\d+\.([\w-]+)/', $_COOKIE['_gcl_aw'], $matches);
+                preg_match('/GCL\.\d+\.([\w-]+)/', $cookie('_gcl_aw'), $matches);
 
                 if (! empty($matches[1])) {
                     $return['_ga'] .= '|GCLID.' . $matches[1];
@@ -163,15 +173,15 @@ class Conversion
             }
         }
 
-        if (! empty($_COOKIE['_fbp'])) {
-            $return['_fbp'] = $_COOKIE['_fbp'];
+        if (! empty($cookie('_fbp'))) {
+            $return['_fbp'] = $cookie('_fbp');
         }
 
-        if (! empty($_COOKIE['_ttp'])) {
-            $return['_ttp'] = $_COOKIE['_ttp'];
+        if (! empty($cookie('_ttp'))) {
+            $return['_ttp'] = $cookie('_ttp');
 
-            if (! empty($_COOKIE['ttclid'])) {
-                $return['_ttp'] .= '|TTCLID.' . $_COOKIE['ttclid'];
+            if (! empty($cookie('ttclid'))) {
+                $return['_ttp'] .= '|TTCLID.' . $cookie('ttclid');
             }
         }
 

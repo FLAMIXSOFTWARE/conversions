@@ -64,6 +64,17 @@ class ConversionTest extends TestCase
         $this->assertSame('GA1.2.1.2|GCLID.Cj0KCQ-ab_c', Conversion::getPreparedUID());
     }
 
+    public function test_array_cookies_are_skipped(): void
+    {
+        $_COOKIE = ['_ga' => ['x'], '_ym_uid' => ['x'], '_fbp' => 'fb.1', '_ttp' => 'ttp1', 'ttclid' => ['x']];
+
+        $this->assertSame(['_fbp' => 'fb.1', '_ttp' => 'ttp1'], Conversion::getFromCookie());
+
+        $_COOKIE = ['_ga' => 'GA1.2.1.2', 'gclid' => ['x'], '_gcl_aw' => ['x']];
+
+        $this->assertSame('GA1.2.1.2', Conversion::getPreparedUID());
+    }
+
     public function test_a_visitor_without_cookies_gets_nothing(): void
     {
         $this->assertSame([], Conversion::getFromCookie());
